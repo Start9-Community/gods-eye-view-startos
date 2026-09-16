@@ -1,52 +1,40 @@
 # God's Eye View
 
-A live 3D globe of public sensor data. Aircraft transponders, ship beacons, satellite orbits, earthquakes, wildfires, road traffic and public webcams, all drawn on a photorealistic globe you can fly around in your browser.
-
 ## Documentation
 
-- Upstream project: <https://github.com/bilawalsidhu/gods-eye-view>
-- Where the data comes from: <https://github.com/bilawalsidhu/gods-eye-view/blob/main/DATA_SOURCES.md>
+- [God's Eye View README](https://github.com/bilawalsidhu/gods-eye-view#readme) — the upstream guide: what is on the globe, the cockpit, voice control, and which keys unlock what.
+- [Data sources](https://github.com/bilawalsidhu/gods-eye-view/blob/main/DATA_SOURCES.md) — where every layer's data comes from and its license.
 
 ## What you get on StartOS
 
-Most of it works the moment it starts — no accounts, no API keys. Flights, satellites, earthquakes, public cameras, radio stations, bikeshare and space launches all run on open data that needs no credentials, and the globe renders real satellite imagery out of the box.
+The globe runs the moment it starts, with no accounts or API keys: flights, satellites, earthquakes, public cameras, radio stations, bikeshare and space launches all use open data, and the imagery is Esri satellite imagery out of the box. StartOS puts a username and password in front of it, since the app has none of its own, and keeps your API keys and the app's caches in one backed-up volume.
 
-A few layers need a key you supply yourself, and those are optional: Google's photorealistic 3D buildings, voice control, wildfires, ship tracking and live traffic.
-
-**This one is worth knowing before you install it.** God's Eye View is a viewer for other people's data, so your server fetches from Google, OpenAI and about a dozen other providers while you use it. Those requests come from your home connection and are not sent over Tor. Every part of the globe you look at is a request to a map provider, and voice control sends your microphone audio to OpenAI. It is a great toy and a genuinely useful OSINT tool — it just isn't a private one, and self-hosting it doesn't make it private.
+Your server fetches from OpenSky, CelesTrak, USGS and about a dozen other providers while you use it, and your browser fetches map tiles directly from Esri, Google or Cesium. Those requests come from your own connection and are not sent over Tor — self-hosting this does not make it private.
 
 ## Getting set up
 
-Nothing is required. Start it and open the Web UI.
+1. Run the **Set Web UI Password** action. StartOS asks you to do this before the service can start. Copy the password — it is shown only once.
+2. Start the service and open the **Web UI**. Your browser asks for a username and password: the username is `admin`, the password is the one from step 1.
+3. Pick a starting view from the first-run panel and you are in.
 
-Your browser will ask for a username and password. The username is `admin`, and the password is in the **Show UI Password** action. God's Eye View has no login of its own, so StartOS puts one in front of it — which also keeps strangers off the parts of it that spend your money.
+Everything below is optional, and each item is its own action. Saving any of them restarts the service; it is back in about ten seconds.
 
-If you want more than the default layers, each of these is optional and each is its own action:
-
-- **Map Tile Keys** — a free Cesium ion token makes imagery more reliable than the shared default. A Google Maps key adds photorealistic 3D buildings, and is metered, so set a billing cap at Google.
-- **Data Feed Keys** — free keys for wildfires (NASA FIRMS), ship tracking (AISStream), traffic (TomTom) and a higher flight-data rate limit (OpenSky).
-- **Voice & Spend Controls** — an OpenAI key for talking to the globe, plus throttles on the metered services.
-
-Saving any of these restarts the service. It comes back in a few seconds.
+- **Map Tile Keys** — a free Cesium ion token adds photorealistic 3D buildings, world terrain and Bing aerial imagery. A Google Maps key adds Google's 3D tiles directly plus place search; it is metered, so set a billing cap at Google.
+- **Data Feed Keys** — free keys for wildfires (NASA FIRMS), ship tracking (AISStream) and live traffic (TomTom), and OpenSky or Launch Library credentials for higher rate limits.
+- **Voice & Spend Controls** — an OpenAI key for talking to the globe, plus per-visitor throttles on the metered services.
 
 ## Using God's Eye View
 
 ### Web interface
 
-Open the Web UI, sign in as `admin`, and pick a starting view. Data layers are in the panel on the left, visual presets on the right. Click any aircraft, vessel, satellite or camera to track it.
-
-The globe is drawn by your browser, not by your server, so how smoothly it runs depends on the device you are viewing from. A phone will struggle where a laptop won't.
+Data layers are in the panel on the left, visual presets on the right. Click any aircraft, vessel, satellite or camera to track it. The globe is drawn by your browser, not by your server, so a phone will struggle where a laptop won't.
 
 ### Actions
 
-- **Show UI Password** — the username and password your browser asks for.
-- **Reset UI Password** — makes a new one and shows it once. The old one stops working right away. Browsers remember these logins, so if the old password still seems to work, open a private window.
-- **Map Tile Keys**, **Data Feed Keys**, **Voice & Spend Controls** — the optional keys described above.
+- **Set Web UI Password** (shown as **Reset Web UI Password** once one exists) — makes a new password and shows it once. The old one stops working right away. Browsers remember these logins, so if the old password still seems to work, open a private window.
+- **Map Tile Keys**, **Data Feed Keys**, **Voice & Spend Controls** — the optional keys described above. Clearing a field turns that key off.
 
 ## Limitations
 
-- The in-app "POWER UP" key panel does not work here. Use the actions instead. You may see it complain when the page loads; you can ignore that.
-- Setting a Google Maps key means that key is readable by anyone who can sign in to your instance — that's how the app is built. Restrict it by referrer in the Google console and set a billing cap.
-- Anyone with your UI password can run up charges on your Google and OpenAI keys. Treat it as a real password, and set spending limits with the providers rather than relying only on the in-app throttles.
-- Over Tor the map imagery is fetched by your browser, not your server, so tiles may load slowly or not at all depending on your browser's settings.
-- Upstream calls this "a fast, hackable foundation, not a hardened production service," and it changes daily. Expect rough edges.
+- The in-app "POWER UP" key panel is not available here; it only works when the app is run from its own development server. Use the actions instead.
+- Anyone with your web UI password can run up charges on your Google and OpenAI keys, and the Google Maps key is readable by anyone who can open the page. Treat the password as a real credential, restrict the Google key by referrer, and set spending limits with the providers rather than relying only on the in-app throttles.

@@ -1,2 +1,19 @@
 .git
 .gitmodules
+node_modules
+javascript
+ncc-cache
+docker-images
+*.s9pk
+
+# Only what `vite build` and the preview server read reaches the image; the
+# docs media alone is ~70 MB of context.
+gods-eye-view/.git
+gods-eye-view/.github
+gods-eye-view/docs
+gods-eye-view/pinokio
+gods-eye-view/tools
+gods-eye-view/node_modules
+gods-eye-view/dist
+gods-eye-view/.gev-cache
+gods-eye-view/*.md
