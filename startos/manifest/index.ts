@@ -5,7 +5,7 @@ export const manifest = setupManifest({
   id: 'gods-eye-view',
   title: "God's Eye View",
   license: 'MIT',
-  packageRepo: 'https://github.com/REPLACE_ME/gods-eye-view-startos', // TODO: set once the packaging repo exists
+  packageRepo: 'https://github.com/Start9-Community/gods-eye-view-startos',
   upstreamRepo: 'https://github.com/bilawalsidhu/gods-eye-view',
   marketingUrl:
     'https://www.spatialintelligence.ai/p/i-open-sourced-gods-eye-view',

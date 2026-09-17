@@ -5,15 +5,16 @@ import { versionGraph } from '../versions'
 import { actions } from '../actions'
 import { restoreInit } from '../backups'
 import { seedFiles } from './seedFiles'
+import { watchPassword } from './watchPassword'
 
 export const init = sdk.setupInit(
   restoreInit,
   versionGraph,
-  // Seeds the UI password before setInterfaces reads it to configure the gate.
   seedFiles,
   setInterfaces,
   setDependencies,
   actions,
+  watchPassword,
 )
 
 export const uninit = sdk.setupUninit(versionGraph)
