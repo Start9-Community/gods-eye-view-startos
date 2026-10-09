@@ -38,3 +38,4 @@ verified, tried, and decided belongs in the commit message and the PR body.
 - **Check `server/providers/` at every bump for a provider that registers only `configureServer`.** The package serves with `vite preview`, so such a provider works upstream and 404s here.
 - **Don't let `.dockerignore` prune `gods-eye-view/scripts/`.** `server/` imports `scripts/pinokio-environment.mjs` and `scripts/google-server-key.mjs` at runtime.
 - **Don't make the reverse-proxy gate optional.** It is the only authentication in front of the `/api/*` proxies that spend the user's API credit.
+- **`GEV_ALLOWED_HOSTS` and `GEV_TRUSTED_PROXY` are daemon env, not `.env`.** `main.ts` sets them per interface address; `vite.config.js` fills `.env` only into `process.env` keys that are still unset, so a `.env` value for them is silently ignored.

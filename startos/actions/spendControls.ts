@@ -15,7 +15,7 @@ export const spendControls = sdk.Action.withInput(
   async () => ({
     name: i18n('Voice & Spend Controls'),
     description: i18n(
-      'The OpenAI key for voice control, and the per-visitor throttles the app applies in front of the metered providers.',
+      'The OpenAI key for voice control, and request throttles shared by visitors behind the StartOS proxy.',
     ),
     warning: i18n(
       'Saving restarts the service. These throttles are not billing caps: anyone who can sign in can drive spend through these endpoints, so also set quotas and billing alerts with the providers themselves.',
@@ -37,8 +37,10 @@ export const spendControls = sdk.Action.withInput(
       placeholder: 'sk-...',
     }),
     GEV_RATELIMIT_OPENAI_PER_MIN: Value.text({
-      name: i18n('OpenAI Requests per Minute (per IP)'),
-      description: i18n("Leave empty for upstream's default (unlimited)."),
+      name: i18n('OpenAI Requests per Minute'),
+      description: i18n(
+        'Leave empty for 30 requests per minute. Set 0 to disable the throttle.',
+      ),
       required: false,
       masked: false,
       default: null,
@@ -46,8 +48,10 @@ export const spendControls = sdk.Action.withInput(
       patterns: wholeNumber,
     }),
     GEV_RATELIMIT_GOOGLE_PER_MIN: Value.text({
-      name: i18n('Google Places Requests per Minute (per IP)'),
-      description: i18n("Leave empty for upstream's default (unlimited)."),
+      name: i18n('Google Places Requests per Minute'),
+      description: i18n(
+        'Leave empty for 120 requests per minute. Set 0 to disable the throttle.',
+      ),
       required: false,
       masked: false,
       default: null,

@@ -1,0 +1,54 @@
+--- a/src/localRequestGate.mjs	2026-10-09 11:38:36.162075359 +0200
++++ b/src/localRequestGate.mjs	2026-10-09 11:45:24.507461851 +0200
+@@ -38,12 +38,29 @@
+ ]);
+ 
+ /**
++ * Behind a trusted reverse proxy, the proxy's own identity headers are not
++ * evidence that the request came from elsewhere. With GEV_TRUSTED_PROXY=1
++ * (set by the StartOS package; see patches/README.md) `hasProxySignals`
++ * ignores the headers the OS proxy injects, and `admitSameSiteRequest`
++ * derives the request's scheme from `X-Forwarded-Proto` instead of the
++ * container-side socket, so same-origin browser requests keep passing. This
++ * is safe only behind a proxy that strips client-supplied `X-Forwarded-*`
++ * before adding its own and refuses hostnames it has not enabled — StartOS's
++ * gated listener does exactly that, at TLS, before any request arrives.
++ */
++const TRUSTED_PROXY =
++  String(process.env.GEV_TRUSTED_PROXY || '').trim() === '1';
++const TRUSTED_PROXY_HEADERS = new Set(['x-forwarded-for', 'x-forwarded-proto']);
++
++/**
+  * Whether a request carries reverse-proxy or CDN forwarding headers. `headers`
+  * is keyed by lower-case header name.
+  */
+ export function hasProxySignals(headers = {}) {
+   return PROXY_SIGNALS.some(
+-    (name) => String(headers[name] || '').trim() !== '',
++    (name) =>
++      !(TRUSTED_PROXY && TRUSTED_PROXY_HEADERS.has(name)) &&
++      String(headers[name] || '').trim() !== '',
+   );
+ }
+ 
+@@ -128,7 +145,19 @@
+         error: 'Opaque origins are not accepted',
+       };
+     }
+-    const authority = requestAuthority(hostHeader, protocol);
++    const forwardedProto = TRUSTED_PROXY
++      ? String(proxyHeaders['x-forwarded-proto'] || '')
++          .split(',')[0]
++          .trim()
++          .toLowerCase()
++      : '';
++    const scheme =
++      forwardedProto === 'https'
++        ? 'https:'
++        : forwardedProto === 'http'
++          ? 'http:'
++          : protocol;
++    const authority = requestAuthority(hostHeader, scheme);
+     let parsedOrigin;
+     try {
+       parsedOrigin = new URL(String(origin));

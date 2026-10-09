@@ -2,7 +2,10 @@ import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
 
 // Only the keys the actions manage are named; upstream's other tunables
-// (CCTV_*, AISSTREAM_BOUNDING_BOXES, OPENAI_REALTIME_*) survive a write.
+// (CCTV_*, OVERPASS_UPSTREAMS, OPENAI_REALTIME_*, GEV_ALLOWED_HOSTS, …)
+// survive a write. GEV_ALLOWED_HOSTS and GEV_TRUSTED_PROXY set in the
+// daemon's env cannot be overridden from here: server/standalone/
+// vite.config.js only fills process.env keys that are still unset.
 const shape = z
   .object({
     // Compiled into the browser bundle by `build/vite.js`, so a change only

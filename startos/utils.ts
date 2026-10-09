@@ -5,7 +5,8 @@ export const uiPort = 4173
 export const appDir = '/app'
 export const cacheDir = `${appDir}/.gev-cache`
 
-// `build/vite.js` opens Vite's `allowedHosts` only for HOST 0.0.0.0 or ::.
+// The wildcard bind chooses interfaces; which Host headers are answered is
+// the allowlist in build/allowedHosts.js — see GEV_ALLOWED_HOSTS in main.ts.
 export const serveHost = '0.0.0.0'
 
 export const uiUsername = 'admin'

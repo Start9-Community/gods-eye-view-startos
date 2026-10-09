@@ -17,11 +17,11 @@ Your server fetches from OpenSky, CelesTrak, USGS and about a dozen other provid
 2. Start the service and open the **Web UI**. Your browser asks for a username and password: the username is `admin`, the password is the one from step 1.
 3. Pick a starting view from the first-run panel and you are in.
 
-Everything below is optional, and each item is its own action. Saving any of them restarts the service; it is back in about ten seconds.
+Everything below is optional, and each item is its own action. Saving any of them restarts the service and rebuilds the page; allow about a minute.
 
 - **Map Tile Keys** — a free Cesium ion token adds photorealistic 3D buildings, world terrain and Bing aerial imagery. A Google Maps key adds Google's 3D tiles directly plus place search; it is metered, so set a billing cap at Google.
 - **Data Feed Keys** — free keys for wildfires (NASA FIRMS), ship tracking (AISStream) and live traffic (TomTom), and OpenSky or Launch Library credentials for higher rate limits.
-- **Voice & Spend Controls** — an OpenAI key for talking to the globe, plus per-visitor throttles on the metered services.
+- **Voice & Spend Controls** — an OpenAI key for talking to the globe, plus request throttles on the metered services. Leave the limits empty for the defaults (OpenAI 30 requests per minute, Google 120), or enter 0 to disable a throttle. These allowances are shared by visitors, not separate caps for each person.
 
 ## Using God's Eye View
 
@@ -37,4 +37,5 @@ Data layers are in the panel on the left, visual presets on the right. Click any
 ## Limitations
 
 - The in-app "POWER UP" key panel is not available here; it only works when the app is run from its own development server. Use the actions instead.
+- MCP agent access and its companion panel are not available through this package's Web UI.
 - Anyone with your web UI password can run up charges on your Google and OpenAI keys, and the Google Maps key is readable by anyone who can open the page. Treat the password as a real credential, restrict the Google key by referrer, and set spending limits with the providers rather than relying only on the in-app throttles.

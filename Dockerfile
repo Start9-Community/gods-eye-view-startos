@@ -5,7 +5,16 @@ FROM node:24.21.0-bookworm-slim AS build
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
+# The patch tool applies our upstream deltas; --fuzz=0 makes a submodule bump
+# that moves the context fail the build loudly. See patches/README.md.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends patch && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 COPY gods-eye-view/ ./
+COPY patches/ ./patches/
+RUN set -e; for p in ./patches/*.patch; do \
+      [ -e "$p" ] || continue; echo "applying $p"; patch -p1 --fuzz=0 <"$p"; \
+    done && rm -rf patches
 # vite is a devDependency and the runtime rebuilds the client, so no
 # NODE_ENV=production.
 RUN npm ci --no-audit --no-fund && \

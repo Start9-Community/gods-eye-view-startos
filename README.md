@@ -32,13 +32,13 @@
 
 ## Image and Container Runtime
 
-Upstream publishes no container image, so the package builds one with its own `Dockerfile` from the `gods-eye-view/` git submodule: `npm ci`, a keyless `vite build`, and the upstream test tooling stripped from `node_modules`.
+Upstream publishes no container image, so the package builds one with its own `Dockerfile` from the `gods-eye-view/` git submodule: the `patches/` upstream deltas are applied first (`patch -p1 --fuzz=0`, so a bump that moves the context fails the build loudly), then `npm ci`, a keyless `vite build`, and the upstream test tooling stripped from `node_modules`. See `patches/README.md` for what each patch carries and when it retires.
 
-| What          | Value                                                                 |
-| ------------- | --------------------------------------------------------------------- |
-| Image source  | Custom `Dockerfile` over the pinned upstream submodule                |
-| Architectures | x86_64, aarch64                                                       |
-| Entrypoint    | None — the daemon runs `vite preview` from `/app/node_modules/.bin`    |
+| What          | Value                                                               |
+| ------------- | ------------------------------------------------------------------- |
+| Image source  | Custom `Dockerfile` over the pinned upstream submodule              |
+| Architectures | x86_64, aarch64                                                     |
+| Entrypoint    | None — the daemon runs `vite preview` from `/app/node_modules/.bin` |
 
 One subcontainer, `gods-eye-view`, shared by the `build-client` oneshot and the `ui` daemon; attach with `start-cli package attach gods-eye-view -n gods-eye-view -- <cmd>`.
 
@@ -48,22 +48,22 @@ Upstream's server is not a standalone HTTP server: every API proxy in `server/pr
 
 One volume, `main`, holding everything the service persists.
 
-| Path on volume | Mounted at                  | Purpose                                                                  |
-| -------------- | --------------------------- | ------------------------------------------------------------------------ |
-| `.env`         | `/app/.env` (read-only)     | API keys and throttles, written only by actions                          |
-| `store.json`   | not mounted                 | The reverse-proxy gate password, read by the package on the host side    |
-| `cache/`       | `/app/.gev-cache`           | Upstream's provider caches — TomTom tiles, FIRMS, terrain, TLEs, launches |
+| Path on volume | Mounted at              | Purpose                                                                   |
+| -------------- | ----------------------- | ------------------------------------------------------------------------- |
+| `.env`         | `/app/.env` (read-only) | API keys and throttles, written only by actions                           |
+| `store.json`   | not mounted             | The reverse-proxy gate password, read by the package on the host side     |
+| `cache/`       | `/app/.gev-cache`       | Upstream's provider caches — TomTom tiles, FIRMS, terrain, TLEs, launches |
 
 ## File Models
 
 Two, both on the `main` volume and both created empty at init.
 
-| Model     | File         | Contents                                                         |
-| --------- | ------------ | ---------------------------------------------------------------- |
-| `envFile` | `.env`       | The keys and throttles the three key actions manage              |
-| `store`   | `store.json` | `uiPassword`, set by the Set Web UI Password action              |
+| Model     | File         | Contents                                            |
+| --------- | ------------ | --------------------------------------------------- |
+| `envFile` | `.env`       | The keys and throttles the three key actions manage |
+| `store`   | `store.json` | `uiPassword`, set by the Set Web UI Password action |
 
-`envFile` names only the keys the actions manage, and the actions are its only writers; a value set by hand on the volume for one of upstream's other tunables (the `CCTV_*` source-pack options, `AISSTREAM_BOUNDING_BOXES`, the `OPENAI_REALTIME_*` model overrides) survives every write. A cleared field is written as an empty string rather than removed, which upstream reads as unset.
+`envFile` names only the keys the actions manage, and the actions are its only writers; a value set by hand on the volume for one of upstream's other tunables (the `CCTV_*` source-pack options, `OVERPASS_UPSTREAMS`, `AISSTREAM_BOUNDING_BOXES`, the `OPENAI_REALTIME_*` model overrides) survives every write. A cleared field is written as an empty string rather than removed, which upstream reads as unset. `GEV_ALLOWED_HOSTS` and `GEV_TRUSTED_PROXY` are not here — they are daemon env, and `.env` cannot override a `process.env` value the daemon already set.
 
 Upstream loads `.env` when Vite evaluates its config, so every key is a launch-time value; the service restarts whenever the file changes. Two of them — `GOOGLE_MAPS_API_KEY` and `CESIUM_ION_TOKEN` — are compiled into the browser bundle rather than read at runtime, which is why the restart rebuilds the client (see [Installation and First-Run Flow](#installation-and-first-run-flow)).
 
@@ -75,11 +75,11 @@ None.
 
 One HTTP interface, gated at the OS reverse proxy, and heavy outbound traffic to third parties.
 
-| Interface | Id   | Type | Internal port | Serves                                          |
-| --------- | ---- | ---- | ------------- | ----------------------------------------------- |
-| Web UI    | `ui` | ui   | 4173          | The globe, and the `/api/*` provider proxies    |
+| Interface | Id   | Type | Internal port | Serves                                       |
+| --------- | ---- | ---- | ------------- | -------------------------------------------- |
+| Web UI    | `ui` | ui   | 4173          | The globe, and the `/api/*` provider proxies |
 
-The binding sets `addSsl.auth` to HTTP Basic (username `admin`), so the OS proxy challenges every request before it reaches the container. Upstream ships no login of its own, and the same origin serves `/api/openai/*`, `/api/google/*` and `/api/tomtom`, which spend the user's own metered API credit — the gate covers those along with the page. The daemon runs with `HOST=0.0.0.0`, which is what makes upstream's Vite config accept the `Host` headers of the addresses StartOS serves.
+The binding sets `addSsl.auth` to HTTP Basic (username `admin`), so the OS proxy challenges every request before it reaches the container. Upstream ships no login of its own, and the same origin serves `/api/openai/*`, `/api/google/*` and `/api/tomtom`, which spend the user's own metered API credit — the gate covers those along with the page. The daemon runs with `HOST=0.0.0.0` to bind every interface. A wildcard bind does not trust every `Host` header: `build/allowedHosts.js` answers IP addresses always, and non-IP names only if listed in `GEV_ALLOWED_HOSTS` (wildcards are refused by design). `main.ts` reads the interface's own hostnames reactively and passes them in — exactly the names StartOS's listener can forward, since that listener refuses hostnames the user has not enabled at TLS time before the request reaches the container. The same OS proxy adds `X-Forwarded-Proto`/`X-Forwarded-For` (its `http` bindings forward with them; client-supplied copies are stripped) and terminates TLS at the OS, so upstream's same-site gate on the cost-bearing endpoints would refuse every browser POST as "proxied"; `patches/` makes that gate trust those two headers when the daemon sets `GEV_TRUSTED_PROXY=1`, which `main.ts` does. The gate's remaining checks — `Sec-Fetch-Site`, foreign and opaque `Origin`s, every other proxy signal — are untouched.
 
 **Outbound**: the server is a client for roughly a dozen third-party APIs — OpenSky, adsb.lol, CelesTrak, USGS, Launch Library, Overpass, Radio Browser, GBFS, municipal camera feeds, and with keys NASA FIRMS, AISStream, TomTom, Google and OpenAI. Those requests leave from the server's own connection, and the browser fetches map tiles and fonts from Esri, Google and Cesium directly.
 
@@ -87,18 +87,20 @@ The binding sets `addSsl.auth` to HTTP Basic (username `admin`), so the OS proxy
 
 Install seeds an empty `.env` and `store.json`, then holds the service on a critical task until a web-UI password exists. Once it is set, the service is usable with no further configuration: flights, satellites, earthquakes, cameras, radio, bikeshare and launches all run on keyless sources, and the globe renders Esri satellite imagery over a keyless terrain source.
 
-On every start the `build-client` oneshot runs `vite build` (about five seconds) before the `ui` daemon, because the two browser-side keys are injected into the bundle at build time. The image ships a keyless build, so a failed rebuild still leaves something servable behind. `main.ts` reads `.env` reactively, so saving any key action restarts the service through this path.
+On every start the `build-client` oneshot runs `vite build` (about a minute on x86) before the `ui` daemon, because the two browser-side keys are injected into the bundle at build time. The image ships a keyless build, so a failed rebuild still leaves something servable behind. `main.ts` reads `.env` reactively, so saving any key action restarts the service through this path; changing the interface's addresses re-renders `GEV_ALLOWED_HOSTS` and restarts the daemon the same way.
 
 ## Actions
 
 Four, all user-facing.
 
-| Action           | When to run it                                              | Cost / repeat safety                                                                              | State changed |
-| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------- |
-| `set-password`   | First setup (raised as a task), a lost password, or rotation | Instant, no restart; each run invalidates the previous password; safe to repeat                 | `store.json`  |
-| `map-keys`       | Photorealistic 3D or Google place search wanted             | Restarts the service and rebuilds the client (~10 s); safe to repeat                             | `.env`        |
-| `data-feed-keys` | A keyed layer (fires, vessels, traffic) is missing, or OpenSky rate limits bite | Restarts the service; safe to repeat                                              | `.env`        |
-| `spend-controls` | Voice control wanted, or metered spend needs throttling     | Restarts the service; safe to repeat                                                              | `.env`        |
+| Action           | When to run it                                                                  | Cost / repeat safety                                                            | State changed |
+| ---------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------- |
+| `set-password`   | First setup (raised as a task), a lost password, or rotation                    | Instant, no restart; each run invalidates the previous password; safe to repeat | `store.json`  |
+| `map-keys`       | Photorealistic 3D or Google place search wanted                                 | Restarts the service and rebuilds the client (~1 min); safe to repeat           | `.env`        |
+| `data-feed-keys` | A keyed layer (fires, vessels, traffic) is missing, or OpenSky rate limits bite | Restarts the service; safe to repeat                                            | `.env`        |
+| `spend-controls` | Voice control wanted, or metered spend needs throttling                         | Restarts the service; safe to repeat                                            | `.env`        |
+
+The OpenAI and Google throttles key on the container socket's peer address, not `X-Forwarded-For`. Visitors behind the StartOS proxy therefore share a request allowance; they do not get independent per-visitor caps.
 
 `set-password` returns the username and password once; `setInterfaces` reads `uiPassword` with `.const()`, so the proxy picks up the new credential on write. A user who still gets in with the old password is seeing their browser's cached Basic credentials, not a failed reset. `data-feed-keys` also derives `OPENSKY_AUTH_MODE`: `oauth` when both the OpenSky client id and secret are present, `anon` otherwise — upstream defaults it to `oauth`, which fails without a full credential.
 
@@ -106,8 +108,8 @@ Four, all user-facing.
 
 One.
 
-| Task           | Severity   | Raised when                                                                        | Cleared by                                     |
-| -------------- | ---------- | ---------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Task           | Severity   | Raised when                                                                                           | Cleared by                                                       |
+| -------------- | ---------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `set-password` | `critical` | `store.json` holds no `uiPassword` — on install, or after restoring a backup taken before one was set | Running the action; it does not return once a password is stored |
 
 While it is raised the service cannot be started and its ordinary controls are hidden.
@@ -116,8 +118,8 @@ While it is raised the service cannot be started and its ordinary controls are h
 
 One, the `ready` check on the `ui` daemon.
 
-| Check | Displayed as  | Probes                                         | A failure means                                                                                                                    |
-| ----- | ------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Check | Displayed as  | Probes                                             | A failure means                                                                                                                          |
+| ----- | ------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `ui`  | Web Interface | Port 4173 listening, with a 30-second grace period | Past the grace period, a service still starting is almost always a failed `build-client` oneshot; its Vite output is in the service logs |
 
 ## Backups and Restore
@@ -131,7 +133,8 @@ One, the `ready` check on the `ui` daemon.
 3. **This is a dev-grade server.** Upstream describes itself as "a fast, hackable foundation, not a hardened production service", and `vite preview` is Vite's preview server. The OS gate is what stands in front of it.
 4. **Not a private service.** Every tile request tells the imagery provider where the user is looking, provider requests leave from the server's own connection, and voice control streams microphone audio to OpenAI.
 5. **Bundled data carries non-MIT terms.** Upstream's code is MIT, but its bundled datasets are not: the TeleGeography submarine-cable map is CC BY-NC-SA 3.0, the datacenter and dam sets are ODbL 1.0, and `public/models/` is excluded from the MIT grant. See upstream's `LICENSE` and `DATA_SOURCES.md`.
-6. **Upstream moves fast and tags rarely.** The submodule pins a commit, not a release; see `UPDATING.md`.
+6. **MCP is not exposed through the Web UI.** Upstream's `/mcp` handler requires a loopback socket peer and a loopback `Host` naming the container port; StartOS proxy requests fail those checks even after authentication. The companion `/panel/` view also needs a second bundle (`npm run build:panel`) that the package does not build.
+7. **Upstream moves fast and tags rarely.** The submodule pins a commit, not a release; see `UPDATING.md`.
 
 ---
 
@@ -150,6 +153,8 @@ file_models:
 startos_managed_env_vars:
   - HOST
   - PORT
+  - GEV_ALLOWED_HOSTS
+  - GEV_TRUSTED_PROXY
   - GOOGLE_MAPS_API_KEY
   - CESIUM_ION_TOKEN
   - GOOGLE_MAPS_SERVER_API_KEY
