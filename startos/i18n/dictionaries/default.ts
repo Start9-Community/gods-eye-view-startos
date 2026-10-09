@@ -55,15 +55,16 @@ const dict = {
   // actions/spendControls.ts
   'Must be a whole number': 39,
   'Voice & Spend Controls': 40,
-  'The OpenAI key for voice control, and the per-visitor throttles the app applies in front of the metered providers.': 41,
+  'The OpenAI key for voice control, and request throttles shared by visitors behind the StartOS proxy.': 41,
   'Saving restarts the service. These throttles are not billing caps: anyone who can sign in can drive spend through these endpoints, so also set quotas and billing alerts with the providers themselves.': 42,
   'OpenAI API Key': 43,
   'Enables voice control through the OpenAI Realtime API. Metered — a few cents per minute of conversation. Audio from the browser is sent to OpenAI.': 44,
-  'OpenAI Requests per Minute (per IP)': 45,
-  "Leave empty for upstream's default (unlimited).": 46,
-  'Google Places Requests per Minute (per IP)': 47,
+  'OpenAI Requests per Minute': 45,
+  'Leave empty for 30 requests per minute. Set 0 to disable the throttle.': 46,
+  'Google Places Requests per Minute': 47,
   'TomTom Daily Tile Budget': 48,
   "Soft cap on traffic-tile requests per day. Leave empty for upstream's default of 40000.": 49,
+  'Leave empty for 120 requests per minute. Set 0 to disable the throttle.': 50,
 } as const
 
 /**
